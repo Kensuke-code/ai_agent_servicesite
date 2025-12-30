@@ -1,20 +1,20 @@
 "use client";
 import { login } from '@/utils/supabase/actions'
 
-import { useState, FormEvent } from "react";
+import { useState } from "react";
 import FormField from "@/components/FormField";
+import PlainLink from '@/components/PlainLink';
 
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       <main className="w-full max-w-md px-6 py-8 bg-white dark:bg-black rounded-lg shadow-lg">
         <h1 className="text-3xl font-semibold text-center mb-8 text-black dark:text-zinc-50">
-          Login (Fix Me Cause Copied from Signup Page) 
+          Sign in
         </h1>
         <form className="space-y-6">
           <FormField
@@ -36,8 +36,16 @@ export default function LoginPage() {
             required
           />
           <button className="w-full py-3 px-4 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black rounded-md font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
-           formAction={login}>Log in</button>
+            formAction={login}>Log in
+          </button>
         </form>
+        <p className="text-center mt-3">
+          ユーザー登録は
+          <PlainLink
+            linkText="こちらから"
+            hyperReference="/auth/signup"
+          />
+        </p>  
       </main>
     </div>
   );

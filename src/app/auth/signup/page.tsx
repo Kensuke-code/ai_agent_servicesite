@@ -1,8 +1,9 @@
 "use client";
 import { signup } from '@/utils/supabase/actions'
 
-import { useState, FormEvent } from "react";
+import { useState } from "react";
 import FormField from "@/components/FormField";
+import PlainLink from '@/components/PlainLink';
 
 
 export default function SignupPage() {
@@ -14,7 +15,7 @@ export default function SignupPage() {
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       <main className="w-full max-w-md px-6 py-8 bg-white dark:bg-black rounded-lg shadow-lg">
         <h1 className="text-3xl font-semibold text-center mb-8 text-black dark:text-zinc-50">
-          Sign Up
+          Sign up
         </h1>
         <form className="space-y-6">
         <FormField
@@ -47,6 +48,13 @@ export default function SignupPage() {
           <button className="w-full py-3 px-4 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black rounded-md font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
            formAction={signup}>Sign up</button>
         </form>
+        <p className="text-center mt-3">
+          ログインは
+          <PlainLink
+            linkText="こちらから"
+            hyperReference="/auth/login"
+          />
+        </p>  
       </main>
     </div>
   );
