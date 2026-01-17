@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import axios from "axios";
 
 type Prop = {
   params: Promise<{ id: string }>;
@@ -15,43 +14,30 @@ interface Message {
 }
 
 export default function ChatPage({ params }: Prop) {
-  const [id, setId] = useState<string>("");
+  const [agentId, setAgentId] = useState<string>("");
   const [inputMessage, setInputMessage] = useState("");
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
 
   useEffect(() => {
     params.then((resolvedParams) => {
-      setId(resolvedParams.id);
+      setAgentId(resolvedParams.id);
     });
   }, [params]);
 
-  // メッセージ送信ハンドラー
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (inputMessage.trim() === "" || !id) return;
+  const addMessage = (message: Message) => {
+    setChatMessages((prev) => [...prev, message]);
+  };
 
-    const newMessage: Message = {
-      id: Date.now(),
-      text: inputMessage.trim(),
-      timestamp: new Date(),
-      isBot: false
-    };
+  const updateBotMessage = (botMessageId: number, text: string) => {
+    setChatMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === botMessageId ? { ...msg, text } : msg
+      )
+    );
+  };
 
-    setChatMessages((prev) => [...prev, newMessage]);
-    setInputMessage(""); // 入力フィールドをクリア
-
-    // ボットのメッセージを初期化
-    const botMessageId = Date.now() + 1;
-    const botMessage: Message = {
-      id: botMessageId,
-      text: "",
-      timestamp: new Date(),
-      isBot: true
-    };
-    setChatMessages((prev) => [...prev, botMessage]);
-
+  const handleStreamResponse = async (botMessageId: number) => {
     try {
-      console.log('Sending request to API route');
       const response = await fetch('/api/invocations', {
         method: 'POST',
         headers: {
@@ -70,7 +56,6 @@ export default function ChatPage({ params }: Prop) {
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-
       let accumulatedText = "";
 
       while (true) {
@@ -79,22 +64,38 @@ export default function ChatPage({ params }: Prop) {
 
         const chunk = decoder.decode(value, { stream: true });
         accumulatedText += chunk;
-        setChatMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === botMessageId ? { ...msg, text: accumulatedText } : msg
-          )
-        );
+        updateBotMessage(botMessageId, accumulatedText);
       }
     } catch (error) {
-      console.error('Error sending message:', error);
-      // エラーメッセージを追加
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      setChatMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === botMessageId ? { ...msg, text: `エラーが発生しました: ${errorMessage}` } : msg
-        )
-      );
+      updateBotMessage(botMessageId, `エラーが発生しました: ${errorMessage}`);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (inputMessage.trim() === "" || !agentId) return;
+
+    const userMessage: Message = {
+      id: Date.now(),
+      text: inputMessage.trim(),
+      timestamp: new Date(),
+      isBot: false
+    };
+
+    addMessage(userMessage);
+    setInputMessage("");
+
+    const botMessageId = Date.now() + 1;
+    const botMessage: Message = {
+      id: botMessageId,
+      text: "",
+      timestamp: new Date(),
+      isBot: true
+    };
+
+    addMessage(botMessage);
+    handleStreamResponse(botMessageId);
   };
 
   return (
@@ -102,14 +103,14 @@ export default function ChatPage({ params }: Prop) {
       <div className="flex-1 overflow-y-auto px-4 py-8">
         <div className="mx-auto max-w-4xl">
           <h1 className="mb-6 text-3xl font-semibold text-black dark:text-zinc-50">
-            Chat {id}
+            Chat {agentId}
           </h1>
 
           {/* メッセージ表示エリア */}
           <div className="mb-6 space-y-4">
             {chatMessages.length === 0 ? (
               <p className="text-center text-zinc-500 dark:text-zinc-400">
-                メッセージがありません。メッセージを入力してください。
+                メッセージを入力してください。
               </p>
             ) : (
               chatMessages.map((msg) => (
@@ -119,7 +120,7 @@ export default function ChatPage({ params }: Prop) {
                 >
                   <div className="flex-shrink-0">
                     <img
-                      src="/chat-icon-human.png"
+                      src={msg.isBot ? "/chat-icon-bot.png" : "/chat-icon-human.png"}
                       alt="icon"
                       width={70}
                       height={70}
