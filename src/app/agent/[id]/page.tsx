@@ -1,34 +1,100 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
 
 type Prop = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 interface Message {
   id: number;
   text: string;
   timestamp: Date;
+  isBot: boolean;
 }
 
 export default function ChatPage({ params }: Prop) {
-  const { id } = params;
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [id, setId] = useState<string>("");
+  const [inputMessage, setInputMessage] = useState("");
+  const [chatMessages, setChatMessages] = useState<Message[]>([]);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    params.then((resolvedParams) => {
+      setId(resolvedParams.id);
+    });
+  }, [params]);
+
+  // メッセージ送信ハンドラー
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (message.trim() === "") return;
+    if (inputMessage.trim() === "" || !id) return;
 
     const newMessage: Message = {
       id: Date.now(),
-      text: message.trim(),
+      text: inputMessage.trim(),
       timestamp: new Date(),
+      isBot: false
     };
 
-    setMessages((prev) => [...prev, newMessage]);
-    setMessage("");
+    setChatMessages((prev) => [...prev, newMessage]);
+    setInputMessage(""); // 入力フィールドをクリア
+
+    // ボットのメッセージを初期化
+    const botMessageId = Date.now() + 1;
+    const botMessage: Message = {
+      id: botMessageId,
+      text: "",
+      timestamp: new Date(),
+      isBot: true
+    };
+    setChatMessages((prev) => [...prev, botMessage]);
+
+    try {
+      console.log('Sending request to API route');
+      const response = await fetch('/api/invocations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: inputMessage.trim() }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      if (!response.body) {
+        throw new Error('Response body is null');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      let accumulatedText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        accumulatedText += chunk;
+        setChatMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === botMessageId ? { ...msg, text: accumulatedText } : msg
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // エラーメッセージを追加
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setChatMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === botMessageId ? { ...msg, text: `エラーが発生しました: ${errorMessage}` } : msg
+        )
+      );
+    }
   };
 
   return (
@@ -41,12 +107,12 @@ export default function ChatPage({ params }: Prop) {
 
           {/* メッセージ表示エリア */}
           <div className="mb-6 space-y-4">
-            {messages.length === 0 ? (
+            {chatMessages.length === 0 ? (
               <p className="text-center text-zinc-500 dark:text-zinc-400">
                 メッセージがありません。メッセージを入力してください。
               </p>
             ) : (
-              messages.map((msg) => (
+              chatMessages.map((msg) => (
                 <div
                   key={msg.id}
                   className="flex gap-3 rounded-lg bg-white p-4 shadow-sm dark:bg-zinc-900"
@@ -78,8 +144,8 @@ export default function ChatPage({ params }: Prop) {
           <form onSubmit={handleSubmit} className="flex gap-4">
             <input
               type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
               placeholder="メッセージを入力..."
               className="flex-1 rounded-md border border-zinc-300 bg-white px-4 py-2 text-black focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
             />

@@ -12,3 +12,9 @@ services:
       - .env
     ports:
       - "3000:3000"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    external: true # Use an existing network named 'app-network'

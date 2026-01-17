@@ -19,7 +19,7 @@ function WelcomeMessage({ userName }: WelcomeMessageProps) {
       </p>
 
       <button className="w-full py-3 px-4 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black rounded-md font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
-           onClick={signout}>Sign out</button>
+        onClick={signout}>Sign out</button>
     </div>
   );
 }
