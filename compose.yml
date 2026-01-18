@@ -1,5 +1,5 @@
 services:
-  app:
+  next-app:
     build:
       context: .
     tty: true
