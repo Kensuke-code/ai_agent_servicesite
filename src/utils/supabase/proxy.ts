@@ -8,8 +8,8 @@ export async function updateSession(request: NextRequest) {
 
   // サーバーコンポーネントはCookieを書き込むことができないため、期限切れの認証トークンを更新して保存するにはプロキシが必要
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_PUBLISHABLE_KEY!,
     {
       cookies: {
         getAll() {

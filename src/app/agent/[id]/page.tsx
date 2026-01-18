@@ -80,7 +80,13 @@ export default function ChatPage({ params }: Prop) {
    */
   const handleStreamResponse = async (botMessageId: string) => {
     try {
-      const response = await fetch('/api/invocations', {
+      const strandsUrl = process.env.NEXT_PUBLIC_STRANDS_APPLICATION_URL;
+      
+      if (!strandsUrl) {
+        throw new Error('NEXT_PUBLIC_STRANDS_APPLICATION_URL is not defined');
+      }
+
+      const response = await fetch(strandsUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: inputMessage.trim() }),
