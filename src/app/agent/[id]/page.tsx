@@ -145,7 +145,9 @@ export default function ChatPage({ params }: Prop) {
     };
 
     addMessage(botMessage);
-    handleStreamResponse(botMessageId);
+    handleStreamResponse(botMessageId).catch((error) => {
+      console.error('Stream error:', error);
+    });
   };
 
   return (
