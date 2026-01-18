@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 type Prop = {
   params: Promise<{ id: string }>;
@@ -13,36 +15,74 @@ interface Message {
   isBot: boolean;
 }
 
+/**
+ * AIエージェントとのチャットページコンポーネント
+ * @param params - URLパラメータ（エージェントIDを含むPromise）
+ */
 export default function ChatPage({ params }: Prop) {
   const [agentId, setAgentId] = useState<string>("");
   const [inputMessage, setInputMessage] = useState("");
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
 
+  // スタイル定義
+  const styles = {
+    botMessage: "text-zinc-700 dark:text-zinc-300 prose prose-sm max-w-none leading-relaxed space-y-3",
+    userMessage: "text-zinc-700 dark:text-zinc-300 leading-relaxed text-right whitespace-pre-wrap",
+    messageContainer: "flex-1 min-w-0",
+    inputField: "flex-1 rounded-md border border-zinc-300 bg-white px-4 py-2 text-black focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50",
+    submitButton: "rounded-md bg-zinc-900 px-6 py-2 font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-black dark:hover:bg-zinc-200",
+  };
+
+  // ReactMarkdownのコンポーネント設定
+  const markdownComponents = {
+    p: ({ children }: { children: React.ReactNode }) => (
+      <p className="leading-relaxed">{children}</p>
+    ),
+    ul: ({ children }: { children: React.ReactNode }) => (
+      <ul className="list-disc ml-6 space-y-1">{children}</ul>
+    ),
+    ol: ({ children }: { children: React.ReactNode }) => (
+      <ol className="list-decimal ml-6 space-y-1">{children}</ol>
+    )
+  };
+
+  // URLパラメータからエージェントIDを取得
   useEffect(() => {
     params.then((resolvedParams) => {
       setAgentId(resolvedParams.id);
     });
   }, [params]);
 
+  /**
+   * チャットメッセージを追加する
+   * @param message - 追加するメッセージオブジェクト
+   */
   const addMessage = (message: Message) => {
     setChatMessages((prev) => [...prev, message]);
   };
 
+  /**
+   * ボットのメッセージを更新する
+   * @param botMessageId - 更新するボットメッセージのID
+   * @param text - 新しいテキスト内容
+   */
   const updateBotMessage = (botMessageId: number, text: string) => {
     setChatMessages((prev) =>
-      prev.map((msg) =>
+      prev.map((msg) => 
         msg.id === botMessageId ? { ...msg, text } : msg
       )
     );
   };
 
+  /**
+   * AIエージェントからのストリームレスポンスを処理する
+   * @param botMessageId - レスポンスを表示するボットメッセージのID
+   */
   const handleStreamResponse = async (botMessageId: number) => {
     try {
       const response = await fetch('/api/invocations', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: inputMessage.trim() }),
       });
 
@@ -72,6 +112,10 @@ export default function ChatPage({ params }: Prop) {
     }
   };
 
+  /**
+   * メッセージ送信フォームの送信を処理する
+   * @param e - フォームイベント
+   */
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (inputMessage.trim() === "" || !agentId) return;
@@ -106,7 +150,7 @@ export default function ChatPage({ params }: Prop) {
             Chat {agentId}
           </h1>
 
-          {/* メッセージ表示エリア */}
+          {/* メッセージ履歴エリア */}
           <div className="mb-6 space-y-4">
             {chatMessages.length === 0 ? (
               <p className="text-center text-zinc-500 dark:text-zinc-400">
@@ -116,21 +160,23 @@ export default function ChatPage({ params }: Prop) {
               chatMessages.map((msg) => (
                 <div
                   key={msg.id}
-                  className="flex gap-3 rounded-lg bg-white p-4 shadow-sm dark:bg-zinc-900"
+                  className={`flex gap-3 rounded-lg p-4 shadow-sm ${msg.isBot ? 'dark:bg-zinc-900' : ''}`}
                 >
-                  <div className="flex-shrink-0">
-                    <img
-                      src={msg.isBot ? "/chat-icon-bot.png" : "/chat-icon-human.png"}
-                      alt="icon"
-                      width={70}
-                      height={70}
-                      className="bg-transparent rounded-full"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-zinc-700 dark:text-zinc-300">
-                      {msg.text}
-                    </p>
+                  <div className={styles.messageContainer}>
+                    {msg.isBot ? (
+                      <div className={styles.botMessage}>
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={markdownComponents}
+                        >
+                          {msg.text}
+                        </ReactMarkdown>
+                      </div>
+                    ) : (
+                      <p className={styles.userMessage}>
+                        {msg.text}
+                      </p>
+                    )}
                   </div>
                 </div>
               ))
@@ -148,11 +194,11 @@ export default function ChatPage({ params }: Prop) {
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               placeholder="メッセージを入力..."
-              className="flex-1 rounded-md border border-zinc-300 bg-white px-4 py-2 text-black focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+              className={styles.inputField}
             />
             <button
               type="submit"
-              className="rounded-md bg-zinc-900 px-6 py-2 font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-black dark:hover:bg-zinc-200"
+              className={styles.submitButton}
             >
               登録
             </button>
