@@ -77,9 +77,22 @@ export default function ChatPage({ params }: Prop) {
   /**
    * AIエージェントからのストリームレスポンスを処理する
    * @param botMessageId - レスポンスを表示するボットメッセージのID
+   * @param prompt - 送信するプロンプト
    */
-  const handleStreamResponse = async (botMessageId: string) => {
+  const handleStreamResponse = async (botMessageId: string, prompt: string) => {
     try {
+      // プロンプトの検証
+      const trimmedPrompt = prompt.trim();
+      const MAX_PROMPT_LENGTH = 10000;
+
+      if (!trimmedPrompt) {
+        throw new Error('プロンプトが空です');
+      }
+
+      if (trimmedPrompt.length > MAX_PROMPT_LENGTH) {
+        throw new Error(`プロンプトは${MAX_PROMPT_LENGTH}文字以内にしてください`);
+      }
+
       const strandsUrl = process.env.NEXT_PUBLIC_STRANDS_APPLICATION_URL;
       
       if (!strandsUrl) {
@@ -89,7 +102,7 @@ export default function ChatPage({ params }: Prop) {
       const response = await fetch(strandsUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: inputMessage.trim() }),
+        body: JSON.stringify({ prompt: trimmedPrompt }),
       });
 
       if (!response.ok) {
@@ -145,7 +158,7 @@ export default function ChatPage({ params }: Prop) {
     };
 
     addMessage(botMessage);
-    handleStreamResponse(botMessageId).catch((error) => {
+    handleStreamResponse(botMessageId, userMessage.text).catch((error) => {
       console.error('Stream error:', error);
     });
   };
