@@ -9,7 +9,7 @@ type Prop = {
 };
 
 interface Message {
-  id: number;
+  id: string;
   text: string;
   timestamp: Date;
   isBot: boolean;
@@ -66,7 +66,7 @@ export default function ChatPage({ params }: Prop) {
    * @param botMessageId - 更新するボットメッセージのID
    * @param text - 新しいテキスト内容
    */
-  const updateBotMessage = (botMessageId: number, text: string) => {
+  const updateBotMessage = (botMessageId: string, text: string) => {
     setChatMessages((prev) =>
       prev.map((msg) => 
         msg.id === botMessageId ? { ...msg, text } : msg
@@ -78,7 +78,7 @@ export default function ChatPage({ params }: Prop) {
    * AIエージェントからのストリームレスポンスを処理する
    * @param botMessageId - レスポンスを表示するボットメッセージのID
    */
-  const handleStreamResponse = async (botMessageId: number) => {
+  const handleStreamResponse = async (botMessageId: string) => {
     try {
       const response = await fetch('/api/invocations', {
         method: 'POST',
@@ -121,7 +121,7 @@ export default function ChatPage({ params }: Prop) {
     if (inputMessage.trim() === "" || !agentId) return;
 
     const userMessage: Message = {
-      id: Date.now(),
+      id: crypto.randomUUID(),
       text: inputMessage.trim(),
       timestamp: new Date(),
       isBot: false
@@ -130,7 +130,7 @@ export default function ChatPage({ params }: Prop) {
     addMessage(userMessage);
     setInputMessage("");
 
-    const botMessageId = Date.now() + 1;
+    const botMessageId = crypto.randomUUID();
     const botMessage: Message = {
       id: botMessageId,
       text: "",
