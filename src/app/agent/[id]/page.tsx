@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import Skeleton from 'react-loading-skeleton'
+import 'react-loading-skeleton/dist/skeleton.css'
+
 
 type Prop = {
   params: Promise<{ id: string }>;
@@ -23,25 +26,26 @@ export default function ChatPage({ params }: Prop) {
   const [agentId, setAgentId] = useState<string>("");
   const [inputMessage, setInputMessage] = useState("");
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // スタイル定義
   const styles = {
     botMessage: "text-zinc-700 dark:text-zinc-300 prose prose-sm max-w-none leading-relaxed space-y-3",
     userMessage: "text-zinc-700 dark:text-zinc-300 leading-relaxed text-right whitespace-pre-wrap",
     messageContainer: "flex-1 min-w-0",
-    inputField: "flex-1 rounded-md border border-zinc-300 bg-white px-4 py-2 text-black focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50",
-    submitButton: "rounded-md bg-zinc-900 px-6 py-2 font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-black dark:hover:bg-zinc-200",
+    inputField: "flex-1 rounded-md border border-zinc-300 bg-white px-4 py-2 text-black focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 disabled:cursor-not-allowed disabled:opacity-50",
+    submitButton: "rounded-md bg-zinc-900 px-6 py-2 font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-black dark:hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50",
   };
 
   // ReactMarkdownのコンポーネント設定
   const markdownComponents = {
-    p: ({ children }: { children: React.ReactNode }) => (
+    p: ({ children }: { children?: React.ReactNode }) => (
       <p className="leading-relaxed">{children}</p>
     ),
-    ul: ({ children }: { children: React.ReactNode }) => (
+    ul: ({ children }: { children?: React.ReactNode }) => (
       <ul className="list-disc ml-6 space-y-1">{children}</ul>
     ),
-    ol: ({ children }: { children: React.ReactNode }) => (
+    ol: ({ children }: { children?: React.ReactNode }) => (
       <ol className="list-decimal ml-6 space-y-1">{children}</ol>
     )
   };
@@ -128,6 +132,8 @@ export default function ChatPage({ params }: Prop) {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       updateBotMessage(botMessageId, `エラーが発生しました: ${errorMessage}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -137,7 +143,9 @@ export default function ChatPage({ params }: Prop) {
    */
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (inputMessage.trim() === "" || !agentId) return;
+    if (inputMessage.trim() === "" || !agentId || isLoading) return;
+
+    setIsLoading(true);
 
     const userMessage: Message = {
       id: crypto.randomUUID(),
@@ -158,8 +166,10 @@ export default function ChatPage({ params }: Prop) {
     };
 
     addMessage(botMessage);
+
     handleStreamResponse(botMessageId, userMessage.text).catch((error) => {
       console.error('Stream error:', error);
+      setIsLoading(false);
     });
   };
 
@@ -186,12 +196,20 @@ export default function ChatPage({ params }: Prop) {
                   <div className={styles.messageContainer}>
                     {msg.isBot ? (
                       <div className={styles.botMessage}>
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                          components={markdownComponents}
-                        >
-                          {msg.text}
-                        </ReactMarkdown>
+                        {msg.text ? (
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={markdownComponents}
+                          >
+                            {msg.text}
+                          </ReactMarkdown>
+                        ) : (
+                          <Skeleton 
+                            count={2} 
+                            baseColor="#27272a"
+                            highlightColor="#3f3f46"
+                          />
+                        )}
                       </div>
                     ) : (
                       <p className={styles.userMessage}>
@@ -216,12 +234,14 @@ export default function ChatPage({ params }: Prop) {
               onChange={(e) => setInputMessage(e.target.value)}
               placeholder="メッセージを入力..."
               className={styles.inputField}
+              disabled={isLoading}
             />
             <button
               type="submit"
               className={styles.submitButton}
+              disabled={isLoading}
             >
-              登録
+              {isLoading ? "送信中..." : "送信"}
             </button>
           </form>
         </div>
